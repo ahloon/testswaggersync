@@ -1,0 +1,1034 @@
+openapi: 3.0.3
+info:
+  title: Supplier Integration Platform API
+  description: "- Changes in this Version\n  - test commit\n  - removed raw field\
+    \ \n  - renamed type and numbder to documentType and documentNumber\n  - schema->request\
+    \ is now string instead of object\n  - new CandidateMatch schema added under Match\n\
+    \  - Datasets, Subject and id are now required (under post/verify)\n- Outstanding\
+    \ Questions from version 0.0.3\n  - How will match flags look for Addresses? I\
+    \ suppose this will depend on supplier\n  but we may just have flags to indicate\
+    \ that the address matched, flags indicate if each part of an address matched.\n\
+    - General Feedback\n  - Managing all of this in a single file is going to get\
+    \ very difficult as it gets bigger. I would look to separate this file into 3\
+    \ parts\n    - Schemas - A file for managing all the common schemas\n    - Examples\
+    \ - A file(s) for managing examples for each request and response. Possible multiple\
+    \ files, one per dataset\n    - API - A file that contains the paths which references\
+    \ the other files plus the standard models where appropriate\n"
+  version: 0.0.4
+servers:
+- url: https://api.sip.com/mock/v1
+  description: API for calling MOCK datasets
+- url: https://api.sip.com/test/v1
+  description: API for calling TEST datasets
+- url: https://api.sip.com/live/v1
+  description: API for caling LIVE datasets
+paths:
+  /dataset:
+    get:
+      tags:
+      - dataset
+      summary: |
+        Retrieves a list of available datasets. Optionally provide search
+        criteria on the url to filter the list of datasets returned
+      parameters:
+      - name: correlation-id
+        in: header
+        description: A correlation id used to trace requests between consumers and
+          SIP
+        required: false
+        style: simple
+        explode: false
+        schema:
+          maxLength: 999
+          type: string
+          example: current
+      - name: country
+        in: query
+        description: The 3 digit ISO country code
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 3
+          type: string
+          example: CHN
+      - name: provider
+        in: query
+        description: The dataset provider name
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 999
+          type: string
+          example: datazoo
+      responses:
+        "200":
+          description: OK - Returns an array of available matching datasets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+              example:
+                datasets:
+                - id: 123
+                  country: CHN
+                  provider: DataZoo
+                  description: DataZoo China National ID
+        default:
+          description: Returns an array of errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+  /dataset/{id}:
+    get:
+      tags:
+      - dataset
+      summary: |
+        Retrieves metadata for the specified dataset
+      parameters:
+      - name: correlation-id
+        in: header
+        description: A correlation id used to trace requests between consumers and
+          SIP
+        required: false
+        style: simple
+        explode: false
+        schema:
+          maxLength: 999
+          type: string
+          example: current
+      - name: id
+        in: path
+        description: The unique dataset id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          example: 123
+      responses:
+        "200":
+          description: OK - Returns metadata information for the specified dataset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetDetail'
+              examples:
+                "123":
+                  value:
+                    id: 123
+                    country: CHN
+                    provider: DataZoo
+                    description: DataZoo China National ID
+                    schema:
+                      request: "{\"$schema\":\"http://json-schema.org/draft-07/schema#\"\
+                        ,\"type\":\"object\",\"properties\":{\"datasets\":{\"type\"\
+                        :\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/verify_datasets\"\
+                        }},\"subject\":{\"$ref\":\"#/definitions/schemas/Subject\"\
+                        }},\"required\":[\"datasets\",\"subject\"],\"definitions\"\
+                        :{\"schemas\":{\"Candidate\":{\"properties\":{\"id\":{\"type\"\
+                        :\"integer\",\"description\":\"A candidate id number unique\
+                        \ within this array only. Useful for referencing this candidate\
+                        \ rather than using array index\",\"format\":\"int32\",\"\
+                        example\":1},\"flags\":{\"$ref\":\"#/definitions/schemas/Match\"\
+                        },\"details\":{\"$ref\":\"#/definitions/schemas/Candidate_details\"\
+                        }},\"description\":\"A matching candidate\"},\"CandidateIdentity\"\
+                        :{\"type\":\"object\",\"properties\":{\"documents\":{\"type\"\
+                        :\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/CandidateIdentityDocument\"\
+                        }}},\"description\":\"The candidates identity details\"},\"\
+                        CandidateIdentityDocument\":{\"type\":\"object\",\"properties\"\
+                        :{\"documentType\":{\"maxLength\":999,\"type\":\"string\"\
+                        ,\"description\":\"The identity document type\",\"example\"\
+                        :\"countryId\"},\"documentNumber\":{\"type\":\"string\",\"\
+                        description\":\"The identity document number\",\"example\"\
+                        :\"37020319611025031X\"}},\"description\":\"An identity document\"\
+                        },\"CandidatePerson\":{\"description\":\"The persons details\"\
+                        ,\"allOf\":[{\"$ref\":\"#/definitions/schemas/Person\"}]},\"\
+                        Credentials\":{\"properties\":{\"userName\":{\"maxLength\"\
+                        :999,\"type\":\"string\",\"description\":\"The user name\"\
+                        ,\"example\":\"gbguser\"},\"password\":{\"maxLength\":999,\"\
+                        type\":\"string\",\"description\":\"The user password\",\"\
+                        example\":\"123PASSWORD\"}},\"description\":\"Credentials\
+                        \ required by the dataset provider\"},\"Dataset\":{\"required\"\
+                        :[\"country\",\"description\",\"id\",\"provider\"],\"type\"\
+                        :\"object\",\"properties\":{\"id\":{\"type\":\"integer\",\"\
+                        description\":\"The dataset id\",\"format\":\"int32\",\"example\"\
+                        :123},\"country\":{\"maxLength\":3,\"type\":\"string\",\"\
+                        description\":\"The 3 digit ISO country code\",\"example\"\
+                        :\"CHN\"},\"provider\":{\"maxLength\":3,\"type\":\"string\"\
+                        ,\"description\":\"The dataset provider name\",\"example\"\
+                        :\"DataZoo\"},\"description\":{\"maxLength\":999,\"type\"\
+                        :\"string\",\"description\":\"The dataset description\",\"\
+                        example\":\"DataZoo China National ID\"}},\"description\"\
+                        :\"The high level details of a Dataset that is available within\
+                        \ a country\"},\"Datasets\":{\"type\":\"object\",\"properties\"\
+                        :{\"datasets\":{\"type\":\"array\",\"items\":{\"$ref\":\"\
+                        #/definitions/schemas/Dataset\"}}},\"description\":\"An array\
+                        \ of dataset information\"},\"DatasetDetail\":{\"required\"\
+                        :[\"schema\"],\"type\":\"object\",\"properties\":{\"schema\"\
+                        :{\"$ref\":\"#/definitions/schemas/DatasetDetail_schema\"\
+                        }},\"description\":\"The high level details of a Dataset that\
+                        \ is available within a country\",\"allOf\":[{\"$ref\":\"\
+                        #/definitions/schemas/Dataset\"}]},\"DatasetResult\":{\"required\"\
+                        :[\"statusCode\"],\"type\":\"object\",\"properties\":{\"statusCode\"\
+                        :{\"type\":\"integer\",\"description\":\"The dataset status\
+                        \ code\",\"format\":\"int32\",\"example\":200}},\"description\"\
+                        :\"The results of the dataset\",\"allOf\":[{\"$ref\":\"#/definitions/schemas/Dataset\"\
+                        }]},\"DatasetResultCandidates\":{\"required\":[\"candidates\"\
+                        ],\"type\":\"object\",\"properties\":{\"candidates\":{\"type\"\
+                        :\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/Candidate\"\
+                        }}},\"description\":\"The results where a dataset returns\
+                        \ multiple candidates\",\"allOf\":[{\"$ref\":\"#/definitions/schemas/DatasetResult\"\
+                        }]},\"DatasetResultError\":{\"type\":\"object\",\"description\"\
+                        :\"The high level details of a Dataset that is available within\
+                        \ a country\",\"allOf\":[{\"$ref\":\"#/definitions/schemas/DatasetResult\"\
+                        },{\"$ref\":\"#/definitions/schemas/Errors\"}]},\"DatasetResultErrors\"\
+                        :{\"required\":[\"results\"],\"type\":\"object\",\"properties\"\
+                        :{\"results\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/DatasetResultError\"\
+                        }}}},\"DatasetResults\":{\"required\":[\"results\"],\"type\"\
+                        :\"object\",\"properties\":{\"results\":{\"type\":\"array\"\
+                        ,\"items\":{\"oneOf\":[{\"$ref\":\"#/definitions/schemas/DatasetResultCandidates\"\
+                        }]}}}},\"Errors\":{\"required\":[\"errors\"],\"type\":\"object\"\
+                        ,\"properties\":{\"errors\":{\"type\":\"array\",\"items\"\
+                        :{\"$ref\":\"#/definitions/schemas/StandardisedError\"}}},\"\
+                        description\":\"An array of errors\"},\"IdentityMatch\":{\"\
+                        type\":\"object\",\"properties\":{\"documents\":{\"type\"\
+                        :\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/IdentityDocumentMatch\"\
+                        }}},\"description\":\"The persons identity flag details\"\
+                        },\"IdentityDocumentMatch\":{\"type\":\"object\",\"properties\"\
+                        :{\"documentType\":{\"maxLength\":999,\"type\":\"string\"\
+                        ,\"description\":\"The identity document type\",\"example\"\
+                        :\"countryId\"},\"documentNumber\":{\"type\":\"string\",\"\
+                        description\":\"Indicates if the document matched\",\"example\"\
+                        :\"match\",\"enum\":[\"match\",\"mismatch\"]}},\"description\"\
+                        :\"An identity document match\"},\"Match\":{\"type\":\"object\"\
+                        ,\"properties\":{\"candidateMatch\":{\"type\":\"string\",\"\
+                        description\":\"Overall match rate for the candidate\",\"\
+                        example\":\"match\",\"enum\":[\"match\",\"noMatch\",\"partialMatch\"\
+                        ]},\"person\":{\"$ref\":\"#/definitions/schemas/PersonMatch\"\
+                        },\"identity\":{\"$ref\":\"#/definitions/schemas/IdentityMatch\"\
+                        }},\"description\":\"The candidates match flag details\"},\"\
+                        PersonMatch\":{\"type\":\"object\",\"properties\":{\"title\"\
+                        :{\"type\":\"string\",\"description\":\"Indicates if the subjects\
+                        \ title was matched\",\"example\":\"match\",\"enum\":[\"match\"\
+                        ,\"mismatch\"]},\"firstName\":{\"type\":\"string\",\"description\"\
+                        :\"Indicates if the subjects first name was matched\",\"example\"\
+                        :\"match\",\"enum\":[\"match\",\"mismatch\"]},\"middleNames\"\
+                        :{\"type\":\"string\",\"description\":\"Indicates if the subjects\
+                        \ middle names were matched\",\"example\":\"match\",\"enum\"\
+                        :[\"match\",\"mismatch\"]},\"lastNames\":{\"type\":\"string\"\
+                        ,\"description\":\"Indicates if the subjects last name was\
+                        \ matched\",\"example\":\"match\",\"enum\":[\"match\",\"mismatch\"\
+                        ]},\"dateOfBirth\":{\"type\":\"string\",\"description\":\"\
+                        Indicates if an subjects date of birth was matched\",\"example\"\
+                        :\"match\",\"enum\":[\"match\",\"mismatch\"]},\"gender\":{\"\
+                        type\":\"string\",\"description\":\"Indicates if a persons\
+                        \ gender was matched\",\"example\":\"match\",\"enum\":[\"\
+                        match\",\"mismatch\"]},\"currentAddress\":{\"type\":\"string\"\
+                        ,\"description\":\"Indicates if a persons gender was matched\"\
+                        ,\"example\":\"match\",\"enum\":[\"match\",\"mismatch\"]},\"\
+                        previousAddresses\":{\"type\":\"string\",\"description\":\"\
+                        Indicates if a persons gender was matched\",\"example\":\"\
+                        match\",\"enum\":[\"match\",\"mismatch\"]},\"phones\":{\"\
+                        type\":\"string\",\"description\":\"Indicates if a persons\
+                        \ gender was matched\",\"example\":\"match\",\"enum\":[\"\
+                        match\",\"mismatch\"]},\"emails\":{\"type\":\"string\",\"\
+                        description\":\"Indicates if a persons gender was matched\"\
+                        ,\"example\":\"match\",\"enum\":[\"match\",\"mismatch\"]},\"\
+                        socials\":{\"type\":\"string\",\"description\":\"Indicates\
+                        \ if a persons gender was matched\",\"example\":\"match\"\
+                        ,\"enum\":[\"match\",\"mismatch\"]}},\"description\":\"Match\
+                        \ flags\"},\"Schema\":{\"type\":\"object\",\"properties\"\
+                        :{\"$schema\":{\"maxLength\":999,\"type\":\"string\",\"example\"\
+                        :\"http://json-schema.org/draft-07/schema#\"},\"type\":{\"\
+                        maxLength\":999,\"type\":\"string\",\"example\":\"object\"\
+                        }}},\"Subject\":{\"type\":\"object\",\"properties\":{\"person\"\
+                        :{\"$ref\":\"#/definitions/schemas/SubjectPerson\"},\"identity\"\
+                        :{\"$ref\":\"#/definitions/schemas/SubjectIdentity\"}},\"\
+                        description\":\"The subject to verify\"},\"SubjectIdentity\"\
+                        :{\"type\":\"object\",\"properties\":{\"documents\":{\"type\"\
+                        :\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/SubjectIdentityDocument\"\
+                        }}},\"description\":\"The persons identity details\"},\"SubjectIdentityDocument\"\
+                        :{\"type\":\"object\",\"properties\":{\"documentType\":{\"\
+                        maxLength\":999,\"type\":\"string\",\"description\":\"The\
+                        \ identity document type\",\"example\":\"countryId\"},\"documentNumber\"\
+                        :{\"type\":\"string\",\"description\":\"The identity document\
+                        \ number\",\"example\":\"37020319611025031X\"}},\"description\"\
+                        :\"An identity document\"},\"SubjectPerson\":{\"description\"\
+                        :\"The persons details\",\"allOf\":[{\"$ref\":\"#/definitions/schemas/Person\"\
+                        }]},\"Person\":{\"type\":\"object\",\"properties\":{\"title\"\
+                        :{\"$ref\":\"#/definitions/schemas/Title\"},\"firstName\"\
+                        :{\"$ref\":\"#/definitions/schemas/FirstName\"},\"middleNames\"\
+                        :{\"$ref\":\"#/definitions/schemas/MiddleNames\"},\"lastNames\"\
+                        :{\"$ref\":\"#/definitions/schemas/LastNames\"},\"dateOfBirth\"\
+                        :{\"$ref\":\"#/definitions/schemas/Date\"},\"gender\":{\"\
+                        $ref\":\"#/definitions/schemas/Gender\"},\"currentAddress\"\
+                        :{\"$ref\":\"#/definitions/schemas/Address\"},\"previousAddresses\"\
+                        :{\"type\":\"array\",\"items\":{\"allOf\":[{\"$ref\":\"#/definitions/schemas/Address\"\
+                        },{\"$ref\":\"#/definitions/schemas/DateRange\"}]}},\"phones\"\
+                        :{\"$ref\":\"#/definitions/schemas/Phones\"},\"emails\":{\"\
+                        $ref\":\"#/definitions/schemas/Emails\"},\"socials\":{\"$ref\"\
+                        :\"#/definitions/schemas/Socials\"}}},\"Title\":{\"type\"\
+                        :\"string\",\"description\":\"Title of an individual such\
+                        \ as Mr, Mrs, Dr, Sir\",\"example\":\"Mr\"},\"FirstName\"\
+                        :{\"type\":\"string\",\"description\":\"A person's name used\
+                        \ by their collegues and friends to address them\",\"example\"\
+                        :\"David\"},\"MiddleNames\":{\"type\":\"array\",\"description\"\
+                        :\"Any other registered names used by the individual, not\
+                        \ aliases\",\"items\":{\"type\":\"string\",\"example\":\"\
+                        James\"}},\"LastNames\":{\"type\":\"array\",\"description\"\
+                        :\"Any family names for the individual\",\"items\":{\"type\"\
+                        :\"string\",\"example\":\"Jones\"}},\"Date\":{\"pattern\"\
+                        :\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\",\"type\":\"string\",\"description\"\
+                        :\"Specified in year, month and day separated by -.  For example\
+                        \ 2017-1-1 or 2017-01-01 which conforms to ISO 8601\",\"example\"\
+                        :\"2000-01-01\"},\"Gender\":{\"type\":\"string\"},\"Address\"\
+                        :{\"type\":\"object\",\"properties\":{\"lines\":{\"type\"\
+                        :\"array\",\"description\":\"unformatted line based address\"\
+                        ,\"items\":{\"type\":\"string\"}},\"addressString\":{\"type\"\
+                        :\"string\",\"description\":\"The address as a single line\"\
+                        },\"premise\":{\"type\":\"string\",\"example\":\"128\"},\"\
+                        building\":{\"type\":\"string\"},\"subBuilding\":{\"type\"\
+                        :\"string\"},\"thoroughfare\":{\"type\":\"string\",\"example\"\
+                        :\"Queen Victoria Street\"},\"dependentThoroughfare\":{\"\
+                        type\":\"string\"},\"locality\":{\"type\":\"string\",\"example\"\
+                        :\"London\"},\"dependentLocality\":{\"type\":\"string\"},\"\
+                        doubleDependentLocality\":{\"type\":\"string\"},\"postalCode\"\
+                        :{\"type\":\"string\",\"example\":\"EC4V 4BJ\"},\"postBox\"\
+                        :{\"type\":\"string\"},\"country\":{\"type\":\"string\",\"\
+                        description\":\"Country the address is in.  It must be a valid\
+                        \ ISO2 or ISO3 country code\",\"example\":\"GBR\"},\"superAdministrativeArea\"\
+                        :{\"type\":\"string\"},\"administrativeArea\":{\"type\":\"\
+                        string\"},\"subAdministrativeArea\":{\"type\":\"string\"},\"\
+                        organization\":{\"type\":\"string\",\"description\":\"an organisation\
+                        \ or company name associated with this address\",\"example\"\
+                        :\"GB Group\"},\"location\":{\"$ref\":\"#/definitions/schemas/Location\"\
+                        }},\"description\":\"GBG Global Address format used across\
+                        \ the GBG product and services\"},\"Location\":{\"type\":\"\
+                        object\",\"properties\":{\"latitude\":{\"type\":\"string\"\
+                        },\"longitude\":{\"type\":\"string\"},\"geoAccuracy\":{\"\
+                        type\":\"string\"},\"what3words\":{\"type\":\"string\",\"\
+                        description\":\"A What3words designation associated with this\
+                        \ location with '.' separator.\",\"example\":\"bearable.expecting.comical\"\
+                        }}},\"DateRange\":{\"type\":\"object\",\"properties\":{\"\
+                        fromDate\":{\"$ref\":\"#/definitions/schemas/Date\"},\"toDate\"\
+                        :{\"$ref\":\"#/definitions/schemas/Date\"}}},\"Phones\":{\"\
+                        type\":\"array\",\"items\":{\"pattern\":\"^(\\\\+)(?:\\\\\
+                        d\\\\s?){1,14}$\",\"type\":\"string\",\"description\":\"GBG\
+                        \ Global Phone format used across the GBG product and services,\
+                        \ Required in international format with +(Country Code)\"\
+                        ,\"example\":\"+44 207 4281250\"}},\"Emails\":{\"type\":\"\
+                        array\",\"items\":{\"type\":\"string\",\"example\":\"person.name@domain.com\"\
+                        }},\"Socials\":{\"type\":\"array\",\"items\":{\"$ref\":\"\
+                        #/definitions/schemas/Socials_inner\"}},\"StandardisedError\"\
+                        :{\"type\":\"object\",\"properties\":{\"location\":{\"type\"\
+                        :\"string\",\"example\":\"Authorization\"},\"code\":{\"type\"\
+                        :\"integer\",\"example\":1106},\"problem\":{\"type\":\"string\"\
+                        ,\"example\":\"The token is invalid\"},\"action\":{\"type\"\
+                        :\"string\",\"example\":\"Please pass a valid token for access\"\
+                        }}},\"verify_datasets\":{\"required\":[\"id\"],\"type\":\"\
+                        object\",\"properties\":{\"id\":{\"type\":\"integer\",\"description\"\
+                        :\"The dataset id\",\"format\":\"int32\",\"example\":123},\"\
+                        credentials\":{\"$ref\":\"#/definitions/schemas/Credentials\"\
+                        }}},\"body\":{\"type\":\"object\",\"properties\":{\"datasets\"\
+                        :{\"type\":\"array\",\"items\":{\"$ref\":\"#/definitions/schemas/verify_datasets\"\
+                        }},\"subject\":{\"$ref\":\"#/definitions/schemas/Subject\"\
+                        }}},\"Candidate_details\":{\"type\":\"object\",\"properties\"\
+                        :{\"person\":{\"$ref\":\"#/definitions/schemas/CandidatePerson\"\
+                        },\"identity\":{\"$ref\":\"#/definitions/schemas/CandidateIdentity\"\
+                        }}},\"DatasetDetail_schema\":{\"required\":[\"request\"],\"\
+                        type\":\"object\",\"properties\":{\"request\":{\"type\":\"\
+                        string\",\"description\":\"Request Schema used for transformation\"\
+                        ,\"example\":\"this schema\"}},\"Socials_inner\":{\"type\"\
+                        :\"object\",\"properties\":{\"type\":{\"type\":\"string\"\
+                        ,\"description\":\"an agreed standardised name for the social\
+                        \ media platform this identity relates to\",\"example\":\"\
+                        Facebook\"},\"identity\":{\"type\":\"string\",\"description\"\
+                        :\"the identity used on this platform\",\"example\":\"myName123456\"\
+                        }},\"description\":\"Social media identity\"}}}}}\n"
+        default:
+          description: Returns an array of errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+  /verify:
+    post:
+      tags:
+      - verify
+      summary: "Performs a verification of a subject against a set of datasets. Depending\
+        \ on the success or failure of the datasets you will recieve an HTTP response\
+        \ indicating if all succeeded (200), if some had problems (200) or all had\
+        \ problems\n"
+      parameters:
+      - name: correlation-id
+        in: header
+        description: A correlation id used to trace requests between consumers and
+          SIP
+        required: false
+        style: simple
+        explode: false
+        schema:
+          maxLength: 999
+          type: string
+          example: current
+      requestBody:
+        description: The verification details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/body'
+            examples:
+              "123":
+                value:
+                  datasets:
+                  - id: 123
+                    credentials:
+                      userName: username
+                      password: password
+                  subject:
+                    person:
+                      firstName: Joe
+                      lastNames:
+                      - Bloggs2
+                    identity:
+                    - documentType: countryId
+                      documentNumber: 37020319611025031X
+        required: true
+      responses:
+        "200":
+          description: OK - Returns the results of each requested dataset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetResults'
+              examples:
+                "123":
+                  value:
+                    results:
+                    - id: 123
+                      statusCode: 200
+                      country: CHN
+                      description: DataZoo China National ID
+                      provider: DataZoo
+                      candidates:
+                      - id: 1
+                        flags:
+                          candidateMatch: match
+                          person:
+                            firstName: match
+                            middleName: match
+                            lastName: match
+                            dateOfBirth: match
+                          identity:
+                            documents:
+                            - documentType: countryId
+                              documentNumber: match
+                        details:
+                          person:
+                            fullName: JoeBloggs2
+                            gender: male
+                            dateOfBirth: 2000-12-25T00:00:00.000+0000
+                          identity:
+                            documents:
+                              documentType: countryId
+                              documentNumber: 37020319611025031X
+        "400":
+          description: BAD REQUEST - Returns error details if the request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        "422":
+          description: UNPROCESSABLE ENTITY - Returns error if the request for a dataset(s)
+            was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetResultErrors'
+        default:
+          description: Returns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+components:
+  schemas:
+    Candidate:
+      properties:
+        id:
+          type: integer
+          description: A candidate id number unique within this array only. Useful
+            for referencing this candidate rather than using array index
+          format: int32
+          example: 1
+        flags:
+          $ref: '#/components/schemas/Match'
+        details:
+          $ref: '#/components/schemas/Candidate_details'
+      description: A matching candidate
+    CandidateIdentity:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidateIdentityDocument'
+      description: The candidates identity details
+    CandidateIdentityDocument:
+      type: object
+      properties:
+        documentType:
+          maxLength: 999
+          type: string
+          description: The identity document type
+          example: countryId
+        documentNumber:
+          type: string
+          description: The identity document number
+          example: 37020319611025031X
+      description: An identity document
+    CandidatePerson:
+      description: The persons details
+      allOf:
+      - $ref: '#/components/schemas/Person'
+    Credentials:
+      properties:
+        userName:
+          maxLength: 999
+          type: string
+          description: The user name
+          example: gbguser
+        password:
+          maxLength: 999
+          type: string
+          description: The user password
+          example: 123PASSWORD
+      description: Credentials required by the dataset provider
+    Dataset:
+      required:
+      - country
+      - description
+      - id
+      - provider
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The dataset id
+          format: int32
+          example: 123
+        country:
+          maxLength: 3
+          type: string
+          description: The 3 digit ISO country code
+          example: CHN
+        provider:
+          maxLength: 3
+          type: string
+          description: The dataset provider name
+          example: DataZoo
+        description:
+          maxLength: 999
+          type: string
+          description: The dataset description
+          example: DataZoo China National ID
+      description: The high level details of a Dataset that is available within a
+        country
+    Datasets:
+      type: object
+      properties:
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dataset'
+      description: An array of dataset information
+    DatasetDetail:
+      required:
+      - schema
+      type: object
+      properties:
+        schema:
+          $ref: '#/components/schemas/DatasetDetail_schema'
+      description: The high level details of a Dataset that is available within a
+        country
+      allOf:
+      - $ref: '#/components/schemas/Dataset'
+    DatasetResult:
+      required:
+      - statusCode
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          description: The dataset status code
+          format: int32
+          example: 200
+      description: The results of the dataset
+      allOf:
+      - $ref: '#/components/schemas/Dataset'
+    DatasetResultCandidates:
+      required:
+      - candidates
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidate'
+      description: The results where a dataset returns multiple candidates
+      allOf:
+      - $ref: '#/components/schemas/DatasetResult'
+    DatasetResultError:
+      type: object
+      description: The high level details of a Dataset that is available within a
+        country
+      allOf:
+      - $ref: '#/components/schemas/DatasetResult'
+      - $ref: '#/components/schemas/Errors'
+    DatasetResultErrors:
+      required:
+      - results
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetResultError'
+    DatasetResults:
+      required:
+      - results
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/DatasetResultCandidates'
+    Errors:
+      required:
+      - errors
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/StandardisedError'
+      description: An array of errors
+    IdentityMatch:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentityDocumentMatch'
+      description: The persons identity flag details
+    IdentityDocumentMatch:
+      type: object
+      properties:
+        documentType:
+          maxLength: 999
+          type: string
+          description: The identity document type
+          example: countryId
+        documentNumber:
+          type: string
+          description: Indicates if the document matched
+          example: match
+          enum:
+          - match
+          - mismatch
+      description: An identity document match
+    Match:
+      type: object
+      properties:
+        candidateMatch:
+          type: string
+          description: Overall match rate for the candidate
+          example: match
+          enum:
+          - match
+          - noMatch
+          - partialMatch
+        person:
+          $ref: '#/components/schemas/PersonMatch'
+        identity:
+          $ref: '#/components/schemas/IdentityMatch'
+      description: The candidates match flag details
+    PersonMatch:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Indicates if the subjects title was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        firstName:
+          type: string
+          description: Indicates if the subjects first name was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        middleNames:
+          type: string
+          description: Indicates if the subjects middle names were matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        lastNames:
+          type: string
+          description: Indicates if the subjects last name was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        dateOfBirth:
+          type: string
+          description: Indicates if an subjects date of birth was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        gender:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        currentAddress:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        previousAddresses:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        phones:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        emails:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+        socials:
+          type: string
+          description: Indicates if a persons gender was matched
+          example: match
+          enum:
+          - match
+          - mismatch
+      description: Match flags
+    Subject:
+      type: object
+      properties:
+        person:
+          $ref: '#/components/schemas/SubjectPerson'
+        identity:
+          $ref: '#/components/schemas/SubjectIdentity'
+      description: The subject to verify
+    SubjectIdentity:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubjectIdentityDocument'
+      description: The persons identity details
+    SubjectIdentityDocument:
+      type: object
+      properties:
+        documentType:
+          maxLength: 999
+          type: string
+          description: The identity document type
+          example: countryId
+        documentNumber:
+          type: string
+          description: The identity document number
+          example: 37020319611025031X
+      description: An identity document
+    SubjectPerson:
+      description: The persons details
+      allOf:
+      - $ref: '#/components/schemas/Person'
+    Person:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/Title'
+        firstName:
+          $ref: '#/components/schemas/FirstName'
+        middleNames:
+          $ref: '#/components/schemas/MiddleNames'
+        lastNames:
+          $ref: '#/components/schemas/LastNames'
+        dateOfBirth:
+          $ref: '#/components/schemas/Date'
+        gender:
+          $ref: '#/components/schemas/Gender'
+        currentAddress:
+          $ref: '#/components/schemas/Address'
+        previousAddresses:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/Address'
+            - $ref: '#/components/schemas/DateRange'
+        phones:
+          $ref: '#/components/schemas/Phones'
+        emails:
+          $ref: '#/components/schemas/Emails'
+        socials:
+          $ref: '#/components/schemas/Socials'
+    Title:
+      type: string
+      description: "Title of an individual such as Mr, Mrs, Dr, Sir"
+      example: Mr
+    FirstName:
+      type: string
+      description: A person's name used by their collegues and friends to address
+        them
+      example: David
+    MiddleNames:
+      type: array
+      description: "Any other registered names used by the individual, not aliases"
+      items:
+        type: string
+        example: James
+    LastNames:
+      type: array
+      description: Any family names for the individual
+      items:
+        type: string
+        example: Jones
+    Date:
+      pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+      type: string
+      description: "Specified in year, month and day separated by -.  For example\
+        \ 2017-1-1 or 2017-01-01 which conforms to ISO 8601"
+      example: 2000-01-01T00:00:00.000+0000
+    Gender:
+      type: string
+    Address:
+      type: object
+      properties:
+        lines:
+          type: array
+          description: unformatted line based address
+          items:
+            type: string
+        addressString:
+          type: string
+          description: The address as a single line
+        premise:
+          type: string
+          example: "128"
+        building:
+          type: string
+        subBuilding:
+          type: string
+        thoroughfare:
+          type: string
+          example: Queen Victoria Street
+        dependentThoroughfare:
+          type: string
+        locality:
+          type: string
+          example: London
+        dependentLocality:
+          type: string
+        doubleDependentLocality:
+          type: string
+        postalCode:
+          type: string
+          example: EC4V 4BJ
+        postBox:
+          type: string
+        country:
+          type: string
+          description: Country the address is in.  It must be a valid ISO2 or ISO3
+            country code
+          example: GBR
+        superAdministrativeArea:
+          type: string
+        administrativeArea:
+          type: string
+        subAdministrativeArea:
+          type: string
+        organization:
+          type: string
+          description: an organisation or company name associated with this address
+          example: GB Group
+        location:
+          $ref: '#/components/schemas/Location'
+      description: GBG Global Address format used across the GBG product and services
+    Location:
+      type: object
+      properties:
+        latitude:
+          type: string
+        longitude:
+          type: string
+        geoAccuracy:
+          type: string
+        what3words:
+          type: string
+          description: A What3words designation associated with this location with
+            '.' separator.
+          example: bearable.expecting.comical
+    DateRange:
+      type: object
+      properties:
+        fromDate:
+          $ref: '#/components/schemas/Date'
+        toDate:
+          $ref: '#/components/schemas/Date'
+    Phones:
+      type: array
+      items:
+        pattern: "^(\\+)(?:\\d\\s?){1,14}$"
+        type: string
+        description: "GBG Global Phone format used across the GBG product and services,\
+          \ Required in international format with +(Country Code)"
+        example: +44 207 4281250
+    Emails:
+      type: array
+      items:
+        type: string
+        example: person.name@domain.com
+    Socials:
+      type: array
+      items:
+        $ref: '#/components/schemas/Socials_inner'
+    StandardisedError:
+      type: object
+      properties:
+        location:
+          type: string
+          example: Authorization
+        code:
+          type: integer
+          example: 1106
+        problem:
+          type: string
+          example: The token is invalid
+        action:
+          type: string
+          example: Please pass a valid token for access
+    verify_datasets:
+      required:
+      - id
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The dataset id
+          format: int32
+          example: 123
+        credentials:
+          $ref: '#/components/schemas/Credentials'
+    body:
+      required:
+      - datasets
+      - subject
+      type: object
+      properties:
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/verify_datasets'
+        subject:
+          $ref: '#/components/schemas/Subject'
+    Candidate_details:
+      type: object
+      properties:
+        person:
+          $ref: '#/components/schemas/CandidatePerson'
+        identity:
+          $ref: '#/components/schemas/CandidateIdentity'
+    DatasetDetail_schema:
+      required:
+      - request
+      type: object
+      properties:
+        request:
+          type: string
+    Socials_inner:
+      type: object
+      properties:
+        type:
+          type: string
+          description: an agreed standardised name for the social media platform this
+            identity relates to
+          example: Facebook
+        identity:
+          type: string
+          description: the identity used on this platform
+          example: myName123456
+      description: Social media identity
+  parameters:
+    DatasetCountry:
+      name: country
+      in: query
+      description: The 3 digit ISO country code
+      required: false
+      style: form
+      explode: true
+      schema:
+        maxLength: 3
+        type: string
+        example: CHN
+    DatasetId:
+      name: id
+      in: path
+      description: The unique dataset id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: integer
+        format: int32
+        example: 123
+    DatasetProvider:
+      name: provider
+      in: query
+      description: The dataset provider name
+      required: false
+      style: form
+      explode: true
+      schema:
+        maxLength: 999
+        type: string
+        example: datazoo
+    CorrelationId:
+      name: correlation-id
+      in: header
+      description: A correlation id used to trace requests between consumers and SIP
+      required: false
+      style: simple
+      explode: false
+      schema:
+        maxLength: 999
+        type: string
+        example: current
