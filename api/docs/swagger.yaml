@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Supplier Integration Platform API
+  title: Supplier Integration Platform (SIP) API
   description: "- Changes in this Version\n  - test commit\n  - removed raw field\
     \ \n  - renamed type and numbder to documentType and documentNumber\n  - schema->request\
     \ is now string instead of object\n  - new CandidateMatch schema added under Match\n\
